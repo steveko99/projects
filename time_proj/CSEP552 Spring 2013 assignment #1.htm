@@ -1,0 +1,183 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0073)http://courses.cs.washington.edu/courses/csep552/13sp/assignments/a1.html -->
+<!DOCTYPE html PUBLIC "-//IETF//DTD HTML//EN" ""><HTML><HEAD><META 
+content="IE=5.0000" http-equiv="X-UA-Compatible">
+ <TITLE>CSEP552 Spring 2013 assignment #1 </TITLE> 
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META name="GENERATOR" content="MSHTML 11.00.10570.1001"></HEAD> 
+<BODY><FONT face="Arial" size="2">
+<H2>CSEP552 Spring 2013 -- assignment #1</H2><B>out:</B> Monday, April 1st, 
+2013<BR><B>due:</B> Tuesday, April 16th, 2013, by 5pm 
+<P>
+<TABLE width="100%" border="0" cellspacing="0" cellpadding="4">
+  <TBODY>
+  <TR bgcolor="#afff00">
+    <TD width="100%" class="part"><FONT face="Arial" size="3"><A name="summary">Summary</A> 
+            </FONT>     </TD></TR></TBODY></TABLE>
+<P>For assignment #1, you will implement a simple UDP-based time synchronization 
+client.  You'll test your client by synchronizing against a time server that we 
+have running on one of our lab machines. By running your synchronization client 
+over a 12-hour-long period, you'll be able to calculate three characteristics: 
+the average round-trip time bewteen your client and the server, the average 
+packet loss rate between your client and the server, and the average  drift rate 
+of your client's clock relative to our server's clock. 
+<P>
+<TABLE width="100%" border="0" cellspacing="0" cellpadding="4">
+  <TBODY>
+  <TR bgcolor="#afff00">
+    <TD width="100%" class="part"><FONT face="Arial" size="3"><A name="sntp">A 
+      simple time synchronization protocol</A>       </FONT>     
+</TD></TR></TBODY></TABLE>
+<P>The basic building block you must first implement is the ability for your 
+client software to communicate with our time synchronization server; we've 
+designed an extremely simple protocol for this.  The protocol is based on the 
+notion of an interaction with the server. In a successful interaction, the 
+client sends the server a synchronization request packet, and the server 
+responds with a synchronization response packet.  
+<P><B>Request packet</B> 
+<P> The client's synchronization request packet is a single UDP packet
+ containing two fields, separated by a single ASCII space character: 
+<UL>
+  <LI> a sequence number (a non-negative 32-bit integer), ASCII  encoded   
+  <P></P>
+  <LI> the time, according to the client's clock, at which the request  packet 
+  was sent, represented as an ACII-encoded floating point  number.  The time 
+  should be the number of seconds since the "epoch"  (January 1, 1970).  Note 
+  that this is the value returned by  time.time() in Python, or the 
+  gettimeofday() system call on Linux.   
+  <P></P></LI></UL>So, for example, a properly formatted client request packet 
+could contain the following; note there is no NULL-terminator at the end: 
+<BLOCKQUOTE><TT><FONT size="3">554 1363805384.267729</FONT></TT></BLOCKQUOTE>
+<P><B>Response packet</B> 
+<P>The server's synchronization response packet is a single UDP packet
+ containing four fields, separated by a single ASCII space character: 
+<UL>
+  <LI> the sequence number from the client's request packet   
+  <P></P>
+  <LI> the time field from the client's request packet   
+  <P></P>
+  <LI> the time, according to the server's clock, at which the  client's request 
+  packet was received.  (Again, this is in  seconds since the epoch.)   
+  <P></P>
+  <LI> the time, according to the server's clock, at which the  server's 
+  response packet was sent. (Again, this is in seconds  since the epoch.)   
+  <P></P></LI></UL>So, a properly formatted server response packet could contain 
+the following: 
+<BLOCKQUOTE><TT><FONT size="3">554 1363805384.267729 1363805383.511432 
+  1363805383.614323</FONT></TT></BLOCKQUOTE><B>Client-side processing</B> 
+<P> The client should also record the time at which it receives the server's 
+response packet.  With this in hand, the client has four timestamps at the end 
+of a successful server interaction: 
+<UL>
+  <LI><B>t3</B>: the time, according to the client's clock, that the  request 
+  packet was sent   
+  <P></P>
+  <LI><B>t2</B>: the time, according to the server's clock, that the  request 
+  packet was received   
+  <P></P>
+  <LI><B>t1</B>: the time, according to the server's clock, that the  response 
+  packet was sent   
+  <P></P>
+  <LI><B>t0</B>: the time, according to the client's clock, that the  response 
+  packet was received </LI></UL>Graphically, this looks like the following: <BR>
+<CENTER><IMG src="CSEP552 Spring 2013 assignment #1_files/timeline.png"> 
+</CENTER><BR clear="all">Using these timestamps, the client can calculate the 
+estimated round-trip time (RTT) and estimated clock offset (Θ) as follows: 
+<BLOCKQUOTE>RTT = (t2 - t3) + (t0 - t1)
+  <P>Θ = ((t2 - t3) - (t0 - t1)) / 2 </P></BLOCKQUOTE>Here, Θ is the estimated 
+offset of the server's clock from the client's clock at the midpoint of the 
+interaction.  In other words, the client should add Θ to its local clock in 
+order to be in sync with the server's clock. 
+<P>
+<TABLE width="100%" border="0" cellspacing="0" cellpadding="4">
+  <TBODY>
+  <TR bgcolor="#afff00">
+    <TD width="100%" class="part"><FONT face="Arial" size="3"><A name="sntpclient">Your 
+      time synchronization client</A>       </FONT>     </TD></TR></TBODY></TABLE>
+<P>Your job is to implement a time synchronization client that can speak to our 
+server using the protocol described above.  Your client should behave as 
+follows: 
+<UL>
+  <LI> Every 10 seconds, your client should initiate an interaction  with our 
+  time server.  So, this means you will be calculating a  series of (RTT, Θ) 
+  estimates, at most once every 10 seconds.  Note that it's possible that your 
+  client's request packet gets  dropped by the Internet, or that our server's 
+  response packet gets  dropped.  If so, that interaction fails, and you won't 
+  generate  estimates for that interaction.  (You'll need to implement some kind 
+   of timeout to realize that an interaction has failed.)   
+  <P></P>
+  <LI> Because of noise in the network, the (RTT, Θ) estimates  will be a little 
+  jittery.  Your client needs to perform some  smoothing over recent estimates 
+  in order to figure out what the  current clock offset to the server should be. 
+   The smoothing you'll  do is extremely simple.  Always keep track of the eight 
+  most recent  successful interactions' estimates.  For each new successful  
+  interaction, pick from those recent eight the estimate with the  lowest RTT, 
+  and use the associated Θ as the "smoothed   Θ".  
+  <P></P>
+  <LI>Produce a log file that contains the following:   
+  <UL>
+    <LI> for each successful interaction, record the (RTT, Θ)     estimate from 
+    that interaction     
+    <LI> for each successful interaction, record the client local time    
+    according to the client hardware, the corrected client local time    
+    factoring in the "smoothed Θ", and the "smoothed Θ"     itself.     
+    <LI> note each unsuccessful interaction.   </LI></UL></LI></UL>
+<P>
+<TABLE width="100%" border="0" cellspacing="0" cellpadding="4">
+  <TBODY>
+  <TR bgcolor="#afff00">
+    <TD width="100%" class="part"><FONT face="Arial" size="3"><A name="whattodo">What 
+      to do</A>       </FONT>     </TD></TR></TBODY></TABLE>
+<P>Do the following: 
+<OL>
+  <LI> Implement and test your time synchronization client.  Our time  
+  synchronization server is running on the host  "futureproof.cs.washington.edu" 
+  on port 5555.   
+  <P></P>
+  <LI> Your client machine probably has the NTP time synchronization  software 
+  running on it.  If possible, disable this, so that your  hardware's clock will 
+  start to drift.   
+  <P></P>
+  <LI> Run your client against our server for 12 hours, and collect  the 
+  resulting log.   
+  <P></P>
+  <LI> Analyze the log to calculate the following three numbers:   
+  <UL>
+    <LI> the average round-trip time between your client and our    server     
+    <P></P>
+    <LI> the packet loss rate between your client and our server,    calculated 
+    as the percentage of interactions that failed.     
+    <P></P>
+    <LI> the average rate at which your client's clock is drifting    relative 
+    to our server's clock, measured in terms of microseconds    per second.  So, 
+    for example, a result of "-75 microseconds per    second" means that for 
+    each second that ticks on the server's    clock, your client's clock only 
+    ticks 0.999925 seconds.     
+    <P></P></LI></UL>
+  <P></P>
+  <LI> Produce a short writeup that includes the following:   
+  <UL>
+    <LI> what language did you use and why?     
+    <P></P>
+    <LI> how do we compile / run your code?     
+    <P></P>
+    <LI> how did you calculate your client's average clock drift rate?     
+    <P></P>
+    <LI> what timeout did you pick to detect a failed interaction, and    what 
+    happens if the server's response packet arrives after that    timeout?     
+    <P></P>
+    <LI> for each successful interaction, calculate the clients'    average 
+    clock drift rate during the period since the previous    successful 
+    interaction.  Plot a histogram of these "instantaneous"    clock drift rate 
+    values, and show that plot in your writeup.    Hypothesize why the histogram 
+    is shaped as it is.     
+    <P></P></LI></UL></LI></OL>
+<P>
+<TABLE width="100%" border="0" cellspacing="0" cellpadding="4">
+  <TBODY>
+  <TR bgcolor="#afff00">
+    <TD width="100%" class="part"><FONT face="Arial" size="3"><A name="whattoturn">What 
+      to turn in</A>       </FONT>     </TD></TR></TBODY></TABLE></P></FONT>
+<P><FONT face="Arial" size="2"> <A href="https://catalyst.uw.edu/collectit/dropbox/gribble/26548">Use
+ the course dropbox</A> to turn in your source code and your writeup. </FONT> 
+</P></BODY></HTML>

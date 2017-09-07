@@ -1,0 +1,364 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0073)http://courses.cs.washington.edu/courses/csep552/13sp/assignments/a3.html --><HTML><HEAD><META 
+content="IE=5.0000" http-equiv="X-UA-Compatible">
+<TITLE>CSEP552 Spring 2013 -- Assignment #3</TITLE>
+<META content=IE=5.0000 http-equiv=X-UA-Compatible>
+<META content="text/html; charset=utf-8" http-equiv=Content-Type>
+<STYLE type=text/css>.intable {
+	BORDER-COLLAPSE: collapse
+}
+.intable TH {
+	BORDER-TOP: black 1px solid; BORDER-RIGHT: black 1px solid; BORDER-BOTTOM: black 1px solid; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 4px; BORDER-LEFT: black 1px solid; PADDING-RIGHT: 4px
+}
+.intable TD {
+	BORDER-TOP: black 1px solid; BORDER-RIGHT: black 1px solid; BORDER-BOTTOM: black 1px solid; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 4px; BORDER-LEFT: black 1px solid; PADDING-RIGHT: 4px
+}
+</STYLE>
+
+<META name=GENERATOR content="MSHTML 11.00.10570.1001"></HEAD>
+<BODY bgColor=#ffffff><FONT size=2 face=Arial>
+<H2>CSEP552 Spring 2013 -- Assignment #3</H2>
+<H3>Implement a P2P client</H3><B>Out:</B> Wednesday, May 22nd, 
+2013<BR><B>Due:</B> Monday, June 10th, 2013, by 5pm 
+<P>
+<CENTER>[ <A 
+href="http://courses.cs.washington.edu/courses/csep552/13sp/assignments/a3.html#overview">overview</A> 
+| <A 
+href="http://courses.cs.washington.edu/courses/csep552/13sp/assignments/a3.html#protocol">protocol 
+description</A> | <A 
+href="http://courses.cs.washington.edu/courses/csep552/13sp/assignments/a3.html#whattodo">what 
+to do</A> | <A 
+href="http://courses.cs.washington.edu/courses/csep552/13sp/assignments/a3.html#turnin">what 
+to turn in</A> ] </CENTER>
+<P>
+<TABLE cellSpacing=0 cellPadding=4 width="100%" border=0>
+  <TBODY>
+  <TR bgColor=#afff00>
+    <TD class=part width="100%"><FONT size=3 face=Arial><A 
+      name=overview>Overview</A> </FONT></TD></TR></TBODY></TABLE>
+<P>In this assignment, you will implement a simple "unstructured" P2P node, 
+execute it to connect it to a course network, and collect textual payloads from 
+your classmates' nodes. The P2P protocol we are using is called CSEtella, and it 
+is loosely based on Gnutella, one of the original fully decentralized P2P 
+file-sharing systems. Instead of building a full file-sharing client, your 
+CSEtella node will host a single, short text block; it shares this text block 
+via a "reply" message, as described below.</P>
+<P>Because your P2P node will act both as a client and as a server, other nodes 
+will need to be able to connect to it. <B>This means that if you run your node 
+behind a NAT proxy, home router, or firewall, you will need to figure out how to 
+poke the appropriate hole in it to allow incoming connections to reach your 
+node.</B> You'll also have to figure out the appropriate IP address to advertise 
+from your node. For example, if your node is running behind a home router, you 
+should advertise the IP address of your home network, rather than the 
+non-routable IP address assiged to your node itself. 
+<P>If you're unsure what this means, we recommend that you instead run your node 
+on one of the attu.cs.washington.edu computers. Pick a random, large port number 
+(e.g., in the range 20,000-40,000) so that you don't accidentally collide with a 
+classmate. </P>
+<TABLE cellSpacing=0 cellPadding=4 width="100%" border=0>
+  <TBODY>
+  <TR bgColor=#afff00>
+    <TD class=part width="100%"><FONT size=3 face=Arial><A 
+      name=protocol>CSEtella protocol description</A> 
+</FONT></TD></TR></TBODY></TABLE>
+<P>CSEtella is a fully decentralized system. What this means is that every node 
+acts like a client, a server, and a router. A node behaves as a client, in that 
+it establishes connections to other nodes, and it sends "ping" and "query" 
+messages to other nodes. A node behaves as a server, in that it accepts 
+connections from other nodes, and it replies to ping and query messages from 
+other nodes by sending back "pong" and "reply" messages, respectively. As well, 
+a node behaves as a router, in that it routes ping, query, pong, and reply 
+messages between nodes. 
+<P>
+<TABLE class=intable style="FONT-SIZE: 12px">
+  <TBODY>
+  <TR>
+    <TD>
+      <CENTER><B>message</B></CENTER></TD>
+    <TD>
+      <CENTER><B>description</B></CENTER></TD></TR>
+  <TR>
+    <TD>ping</TD>
+    <TD>A ping message is sent by a node to discover other nodes on the 
+      network. When a node receives a ping message, it is expected to route the 
+      ping message to other nodes (i.e., it participates in a flood of the 
+      ping), and it is also expected to respond to the ping with a pong 
+    message.</TD></TR>
+  <TR>
+    <TD>pong</TD>
+    <TD>A pong message is a response to a ping message. A pong includes the IP 
+      address and port number of the responding node. In a sense, then, a pong 
+      message advertises the responding node's availability to other nodes in 
+      the network. Each pong message is routed back to the node that initially 
+      flooded the ping; in other words, pong messages are not flooded.</TD></TR>
+  <TR>
+    <TD>query</TD>
+    <TD>A query message is sent by a node to ask other nodes to share their 
+      text block. When a node receives a query message, it is expected to route 
+      the query message to other nodes (i.e., it participates in a flood of the 
+      query), and it is also expected to respond to the query with a reply 
+      message.</TD></TR>
+  <TR>
+    <TD>reply</TD>
+    <TD>A reply message is a response to a query message. A reply message 
+      includes a short text block shared by the responding node. The reply 
+      message is routed back to the node that initially flooded the query 
+      message; in other words, reply messages are not 
+flooded.</TD></TR></TBODY></TABLE>
+<P>Note that TCP connections in CSEtella are "persistent." This means that many 
+messages will flow in each direction over a single TCP connection: you should 
+<B>not</B> be disconnecting after sending or receiving a single message. 
+<P>Once launched, your CSEtella node should proceed in the following manner: 
+<OL>
+  <LI>Your node should create a listening socket so that other nodes can 
+  establish TCP connections to it. 
+  <P></P>
+  <LI>Your node should establish a TCP connection to the IP address and port 
+  number of at least one known CSEtella node. Note that Steve will attempt to 
+  maintain a CSEtella node on IP address 128.208.2.88 and port number 5002. 
+  <P></P>
+  <LI>Once it has established a connection to another node, your node should 
+  begin periodically sending ping messages on all peer connections. The other 
+  node will respond with a pong, and also flood the ping onwards through the 
+  CSEtella network, causing other nodes to respond with pongs as well. As a 
+  result, your node will receive many pong messages back from a single ping. 
+  Each pong message informs your node of another peer node that it can choose to 
+  connect to, if it wants. 
+  <P></P>
+  <LI>Your node should establish a handful of connections to other nodes, to 
+  improve the robustness of the overall P2P network. The specific number of 
+  connections you try to maintain over time is up to you. 
+  <P></P>
+  <LI>Periodically, your node should send a query message out to each of its 
+  connected nodes. The query message will be flooded out over the CSEtella 
+  network, causing a stream of reply messages to be routed back to your node. 
+  Your node should record the text block embedded in each reply message, since 
+  part of your turn-in will be a list of unique text blocks that you have 
+  harvested. 
+  <P></P>
+  <LI>Your node should be willing to accept incoming connections from other 
+  nodes. (Other nodes will discover your node's IP address and port number from 
+  the pong and reply messages that your node sends.) 
+  <P></P></LI></OL>Each CSEtella message shares a common wire format: a message 
+header followed by an optional payload. Ping and query messages have no payload; 
+they consist only of the message header. Pong and reply messages have a payload; 
+they consist of a message header followed by a type-specific payload. All fields 
+in messages are in network (big endian) byte order. 
+<P>
+<HR>
+
+<P><B>Message header</B> 
+<P><IMG src="CSEP552 Spring 2013 -- Assignment #3_files/header.png"> 
+<BR clear=all>
+<UL>
+  <LI><B>message_ID</B>: a 16-byte-long string uniquely identifying the message 
+  on the network. 
+  <P></P>
+  <LI><B>type</B>: a 1-byte field identifying the message's type: 
+  <UL>
+    <LI>0: ping 
+    <LI>1: pong 
+    <LI>2: query 
+    <LI>3: reply </LI></UL>
+  <P></P>
+  <LI><B>TTL</B>: time-to-live. This field describes the number of times the 
+  message will be forwarded by CSEtella nodes before it is removed from the 
+  network. Each node should decrement the TTL before passing the message on to 
+  another node. When the TTL hits 0, the message will no longer be forwarded. 
+  <P></P>
+  <LI><B>hops</B>: the number of times the message has been forwarded. As a 
+  message is passed from node to node, the hops field is incremented. Thus, the 
+  TTL and hops field in the message header will always satisfy the following 
+  condition, after <I>i</I> hops: 
+  <BLOCKQUOTE>TTL(0) = TTL(i) + hops(i) </BLOCKQUOTE>
+  <P></P>
+  <LI><B>payload_length</B>: contains (in big endian!) the length of the message 
+  payload that immediately follows the header. Note that the payload length of 
+  ping and query messages is zero bytes. Also, note that the next message header 
+  on the wire is located exactly payload_length bytes from the end of this 
+  message header. </LI></UL>
+<P>
+<HR>
+
+<P><B>Ping</B> 
+<P>A ping message consists simply of a message header with its type field set to 
+0x00, and the payload_length field set to 0x00000000. 
+<P>
+<HR>
+
+<P><B>Pong</B> 
+<P><IMG src="CSEP552 Spring 2013 -- Assignment #3_files/pong.png"> 
+<BR clear=all>
+<UL>
+  <LI><B>port</B>: the two-byte long port number that the responding peer is 
+  listening on, in big endian. 
+  <P></P>
+  <LI><B>IPv4 address</B>: the four bytes of the IPv4 address that the 
+  responding peer is listening on, in big endian. For example, if your IP 
+  address is 128.208.1.30, then byte 2 of the pong message would be 128, byte 3 
+  would be 208, byte 4 would be 1, and byte 5 would be 30. 
+  <P></P></LI></UL>A pong message contains a message header followed by a 
+six-byte-long payload; the pong payload is as shown above. Note that the 
+message_ID of a pong message should be set to the same value as the message_ID 
+of the ping message that caused the pong to be generated. This enables pong 
+messages to be routed back towards the peer that originated the ping. Also note 
+that the type field of a pong message should be set to 0x01. 
+<P>
+<HR>
+
+<P><B>Query</B> 
+<P>A query message consists simply of a message header with its type field set 
+to 0x02, and the payload_length field set to 0x00000000. 
+<P>
+<HR>
+
+<P><B>Reply</B> 
+<P><IMG src="CSEP552 Spring 2013 -- Assignment #3_files/reply.png"> 
+<BR clear=all>
+<UL>
+  <LI><B>port</B>: the two-byte long port number that the responding peer is 
+  listening on, in big endian. 
+  <P></P>
+  <LI><B>IPv4 address</B>: the four bytes of the IPv4 address that the 
+  responding peer is listening on, in big endian. For example, if your IP 
+  address is 128.208.1.30, then byte 2 of the pong message would be 128, byte 3 
+  would be 208, byte 4 would be 1, and byte 5 would be 30. 
+  <P></P>
+  <LI><B>text block</B>: an ASCII text block containing a message formatted 
+  similarly to the following: 
+  <BLOCKQUOTE>Steven Gribble -- gribble [at] cs.washington.edu </BLOCKQUOTE>In 
+  other words, the text block should contain your name and email address. 
+</LI></UL>A reply message contains a message header followed by a 6+(text block 
+length) byte long payload; the reply payload is as shown above. Note that the 
+message_ID of a reply message should be set to the same value as the message_ID 
+of the query message that caused the reply to be generated. This enables reply 
+messages to be routed back towards the peer that originated the query. Also note 
+that the type field of a reply message should be set to 0x03. 
+<P>
+<HR>
+
+<P><B>Message routing</B> 
+<P>The peer-to-peer nature of CSEtella requires nodes to route network traffic 
+appropriately. A well-behaved CSEtella node will route messages according to the 
+following rules: 
+<OL>
+  <LI>Pong messages may only be sent along the same path that carried the 
+  incoming ping message. This ensures that only those nodes that routed the ping 
+  message will see the pong message in response. A node that receives a pong 
+  message with message_ID = N, but has not seen a ping message with message_ID = 
+  N, should remove the pong message from the network. 
+  <P></P>
+  <LI>Reply messages may only be sent along the same path that carried the 
+  incoming query message. This ensures that only those nodes that routed the 
+  query message will see the reply message in response. A node that receives a 
+  reply message with message_ID = N, but has not seen a query message with 
+  message_ID = N, should remove the reply message from the network. 
+  <P></P>
+  <LI>A node will forward incoming ping and query messages to all of its 
+  directly connected peers, except the peer that delivered the incoming ping or 
+  query message. 
+  <P></P>
+  <LI>A node will decrement a message's TTL field and increment its hops field 
+  before forwarding the message to any directly connected peer. If, after 
+  decrementing the TTL field, the TTL field is found to be zero, the message is 
+  not forwarded along any connection. 
+  <P></P>
+  <LI>If a node receives a ping or query message with the same descriptor ID as 
+  one that it has received before, it should avoid forwarding that message to 
+  any peer. (This implies your node will need to keep a cache of recently 
+  observed message headers.) 
+  <P></P></LI></OL><IMG 
+src="CSEP552 Spring 2013 -- Assignment #3_files/pingpong.png"> <BR 
+clear=all>The image above shows an example of how an incoming ping is routed by 
+a node, how a ping causes pong messages to be generated, and how the pongs are 
+routed back along the paths that the pings took. 
+<P>
+<TABLE cellSpacing=0 cellPadding=4 width="100%" border=0>
+  <TBODY>
+  <TR bgColor=#afff00>
+    <TD class=part width="100%"><FONT size=3 face=Arial><A name=whattodo>What 
+      to do</A> </FONT></TD></TR></TBODY></TABLE>
+<P>Implement a CSEtella peer, using any language, runtime, and operating system 
+of your choice. We recommend that you first test your peer against itself -- 
+i.e., run several copies of your peer and connect them to each other in a little 
+private network. Once you think you have that working, go ahead and connect to 
+the course network. As a reminder, Steve will (attempt to) keep a peer up and 
+running on IP address 128.208.2.88 and port number 5002. You can use this to 
+bootstrap your node: by routing ping messages through Steve's node, you will 
+learn about other nodes on the network, and you can connect your peer to some of 
+them. 
+<P>Leave your peer running for as long as you can -- once you have it working, 
+leave it up and running until after the assignment is due. Your goals should 
+include the following: 
+<UL>
+  <LI>See if you can get other peers to connect to your peer. 
+  <P></P>
+  <LI>Make sure your peer connects to a handful of other peers, rather than just 
+  relying on a single connection to Steve's peer. (We want a more interesting 
+  topology than a star network!) 
+  <P></P>
+  <LI>Periodically send out query messages, and harvest the text blocks from the 
+  reply messages you receive back. Keep a list of unique text blocks; you'll 
+  turn this in as part of your deliverables. 
+  <P></P>
+  <LI>Make sure that your node is defensively programmed. What would happen if 
+  other peers crash in the middle of an exchange, or send you bogus messages, or 
+  block? 
+  <P></P></LI></UL>
+<P><B>Optional task #1</B> 
+<P>Build a CSEtella crawler. Your crawler should use a ping message with TTL 1 
+to discover the immediate neighbors of a node. Then, it should connect to each 
+neighbor, and send a ping with a TTL of 2 to discover their neighbors. Continue 
+until you've discovered all of the nodes and connections in the network. (How 
+will you know when you're done?) 
+<P>Use a graph drawing program like <A 
+href="http://www.graphviz.org/">graphviz</A> to visualize the structure of the 
+network. 
+<P><B>Optional task #2</B> 
+<P>Build a web server front end to your CSEtella peer. Your web server can 
+report on a number of properties of your peer: 
+<UL>
+  <LI>the IP address, port number, and text blocks of the peers your peer is 
+  immediately connected to 
+  <P></P>
+  <LI>the rate at which your peer is processing messages of different types 
+  <P></P>
+  <LI>a list of peer IP address / port / text blocks of peers you have heard 
+  about through pong and reply messages 
+  <P></P></LI></UL>
+<TABLE cellSpacing=0 cellPadding=4 width="100%" border=0>
+  <TBODY>
+  <TR bgColor=#afff00>
+    <TD class=part width="100%"><FONT size=3 face=Arial><A name=turnin>What to 
+      turn in</A> </FONT></TD></TR></TBODY></TABLE>
+<P>You should turn in the following: 
+<UL>
+  <LI>a copy of your source code, and instructions on how we can compile / run 
+  your code. (We probably won't compile everybody's code, but we might 
+  experiment with a few of your peers.) 
+  <P></P>
+  <LI>describe the overall code structure of your peer. What major modules and 
+  interfaces did you design? What were the hard parts to get right, and why? 
+  <P></P>
+  <LI>tell us what IP address and port number your peer was running on once you 
+  had it up and stable. Also, tell us what short text block your peer was 
+  serving in its reply messages. 
+  <P></P>
+  <LI>give us a list of all of the unique text blocks that you discovered from 
+  your classmates by running your peer. 
+  <P></P>
+  <LI>if you implemented the optional crawler, describe any interesting 
+  phenomena or difficulties you ran into, and also give us the results of your 
+  crawl -- i.e., how many nodes, what each node's immediate connections were, 
+  and if you were able to, a graph visualization of the network. 
+  <P></P>
+  <LI>if you implemented the optional web server front end, give us the URL to 
+  use to connect to it, and try to keep your node running for a few days after 
+  the assignment deadline, so that we can try interacting with it. If you can't 
+  do this, then describe for us what your server provided, and give us a few 
+  screenshots of you interacting with it through a browser. 
+  <P></P></LI></UL></FONT>
+<P><FONT size=2 face=Arial><A 
+href="https://catalyst.uw.edu/collectit/dropbox/gribble/26548">Use the course 
+dropbox</A> to turn in your source code and your writeup. 
+</FONT></P></BODY></HTML>

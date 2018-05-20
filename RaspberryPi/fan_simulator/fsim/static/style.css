@@ -1,0 +1,15 @@
+.btn_temp {
+    font-size: 18;
+}
+
+.cold {
+    background-color: yellow;
+}
+
+.warm {
+    background-color: orange;
+}
+
+.hot  {
+    background-color: red;
+}

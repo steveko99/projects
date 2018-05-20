@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>  
+  <head>
+    <title>{{title}}</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
+  </head>
+  <body>
+    <h1>{{title}}</h1>
+
+    <p>Choose a temperature reading and check the SenseHat on the Raspberry Pi</p>
+    <p>The fan speed will be 10 times RPM of the temperature button number.  So [1..15] maps to [10, 20, 30, ... 150] RPM</p>
+
+    <button id="btn_on">Animation ON</button>
+    <button id="btn_off">Animation OFF</button>
+
+    <h1>TEMPERATURE</h1>
+    <button class="btn_temp" id="btn_temp0">none</button>
+    <button class="btn_temp cold" id="btn_temp1">cold-yellow-1</button>
+    <button class="btn_temp cold" id="btn_temp2">cold-yellow-2</button>
+    <button class="btn_temp cold" id="btn_temp3">cold-yellow-3</button>
+    <button class="btn_temp cold" id="btn_temp4">cold-yellow-4</button>
+    <button class="btn_temp cold" id="btn_temp5">cold-yellow-5</button>
+    <button class="btn_temp warm" id="btn_temp6">warm-orange-6</button>
+    <button class="btn_temp warm" id="btn_temp7">warm-orange-7</button>
+    <button class="btn_temp warm" id="btn_temp8">warm-orange-8</button>
+    <button class="btn_temp warm" id="btn_temp9">warm-orange-9</button>
+    <button class="btn_temp warm" id="btn_temp10">warm-orange-10</button>
+    <button class="btn_temp hot" id="btn_temp11">red-hot-11</button>
+    <button class="btn_temp hot" id="btn_temp12">red-hot-12</button>
+    <button class="btn_temp hot" id="btn_temp13">red-hot-13</button>
+    <button class="btn_temp hot" id="btn_temp14">red-hot-14</button>
+    <button class="btn_temp hot" id="btn_temp15">red-hot-15</button>
+
+    <script type="text/javascript" src="{{url_for('static', filename='script.js')}}"></script>
+  </body>
+</html>  

@@ -20,7 +20,7 @@ NOTE: This app requires a Raspberry Pi with a 'SenseHat'
 
 ---- FILES ----
 main.py         - Defines the REST API to control the animation
-fan_thread.py   - FanThread class has methods to control animatiion thread
+fan_thread.py   - FanThread class has methods to control animation thread
 fan_draw.py     - FanDraw class has methods to draw the fan and temperature guage
 
 ---- TESTS - requires a Raspberry Pi and a SenseHat ----

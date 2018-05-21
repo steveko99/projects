@@ -1,3 +1,9 @@
+
+----
+
+DEMO: There is a video demo for this project on YouTube
+        https://www.youtube.com/watch?v=w4afRZfB4yc
+
 ----
 This app is part of my capstone project for University of Washington Internet of Things night class
 NOTE: This app requires a Raspberry Pi with a 'SenseHat'
